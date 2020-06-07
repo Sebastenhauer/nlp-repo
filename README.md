@@ -6,16 +6,16 @@ The code in this repo allows you to get import, clean, analyse, sort and illustr
 As this is my first nlp-project and I am a beginner in coding, I am extremely grateful for feedback!
 
 
-input:
-directory which contains documents of various file formats. supports languages German, English as well as the latin languages
+input:\n
+directory which contains documents of various file formats. supports languages German, English as well as the latin languages\n
 output:
 pandas dataframe with basic analysis and linguistic features for each document (or each language of each document)
 html graphical summary of the dataframe
 
 
 The script does basically the following:
-1: transform pdfs, docx and some other formated documents into txt
-2: let the user decide from which directory documents should be imported
+1: transform pdfs, docx and some other formated documents into txt \n
+2: let the user decide from which directory documents should be imported \n
 3: let the user specify if single documents in the directory are written in more than one language
 4: depending on the answer to 3, the language detection is applied on the entire document or on each sentence of the doc individually (= considerably more costly and not always accurate, especially if the document is not well parsed)
 5: apply some cleaning functions, adapted from the package nlpre
