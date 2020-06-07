@@ -55,3 +55,5 @@ further development path:
 
 5: allow parsing from web ressources (see spacy-holmes code and beautifulsoup)
 
+6: add further useful functions to the pipeline such as a specific spacy-matcher, train an ner ... 
+
