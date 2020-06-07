@@ -14,7 +14,7 @@ html graphical summary of the dataframe
 
 
 The script does basically the following:
-1: transform pdfs, docx and some other formated documents into txt \n
+1: transform pdfs, docx and some other formated documents into txt /n
 2: let the user decide from which directory documents should be imported \n
 3: let the user specify if single documents in the directory are written in more than one language
 4: depending on the answer to 3, the language detection is applied on the entire document or on each sentence of the doc individually (= considerably more costly and not always accurate, especially if the document is not well parsed)
