@@ -1,10 +1,11 @@
 # nlp-repo
 
 
-The code in this repo allows you to get import, clean, analyse, sort and illustrate texts of several data types from a directory of choice.
+The code in this repo allows you to import, clean, analyse, sort and illustrate texts of several data types from a directory of choice.
 - 
 
 As this is my first nlp-project and I am a beginner in coding, I am extremely grateful for feedback!
+In fact, professional developers may laugth at some parts of the code :) Well, it was just more fun to code something useful than to read through long books on programming...
 
 
 input:
