@@ -25,9 +25,9 @@ html graphical summary of the dataframe
 The script does basically the following:
 - 
 
-1: transform pdfs, docx and some other formated documents into txt
+1: let the user decide from which directory documents should be imported
 
-2: let the user decide from which directory documents should be imported
+2: transform pdfs, docx and some other formated documents into txt
 
 3: let the user specify if single documents in the directory are written in more than one language
 
@@ -37,7 +37,7 @@ The script does basically the following:
 
 6: define textname, language, cleaned text (= subselect certain linguistic elements), nouns, verbs, adjectives and named entities
 
-7: story all these data along with the original text in a pandas dataframe in the directory from which the documents are parsed
+7: store this data along with the original texts in a pandas dataframe in the directory from which the documents are parsed
 
 8: output a graphical summary of the documents in a html with the package scattertext (does not work currently if only one language is predicted!)
 
