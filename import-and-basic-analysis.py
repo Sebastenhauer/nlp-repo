@@ -39,7 +39,6 @@ import numpy as np
 import pandas as pd
 import collections
 import pycountry
-import PyPDF2
 import scattertext as st
 import spacy
 import spacy_langdetect
