@@ -1,17 +1,19 @@
 # nlp-repo
 
-my first nlp project
 
 The code in this repo allows you to get import, clean, analyse, sort and illustrate texts of several data types from a directory of choice.
+- 
 
 As this is my first nlp-project and I am a beginner in coding, I am extremely grateful for feedback!
 
 
 input:
+- 
 
 directory which contains documents of various file formats. supports languages German, English as well as the latin languages
 
 output:
+- 
 
 pandas dataframe with basic analysis and linguistic features for each document (or each language of each document)
 
@@ -20,6 +22,7 @@ html graphical summary of the dataframe
 
 
 The script does basically the following:
+- 
 
 1: transform pdfs, docx and some other formated documents into txt
 
@@ -40,6 +43,7 @@ The script does basically the following:
 
 
 further development path:
+- 
 
 1: train a text classifier with spacy-transformers and textcat and add to the second nlp-pipeline
 
