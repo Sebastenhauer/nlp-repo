@@ -1,0 +1,8 @@
+numpy==1.18.4
+spacy==2.2.4
+fitz==0.0.1.dev2
+pandas==1.0.4
+pycountry==19.8.18
+scattertext==0.0.2.64
+spacy_langdetect==0.1.2
+textract==1.6.3
