@@ -39,19 +39,19 @@ The script does basically the following:
 
 7: store this data along with the original texts in a pandas dataframe in the directory from which the documents are parsed
 
-8: output a graphical summary of the documents in a html with the package scattertext (does not work currently if only one language is predicted!)
+8: output a graphical summary of the documents with the package scattertext (does not work currently if only one language is predicted!)
 
 
 
 further development path:
 - 
+1: find a way to eliminate the first spacy pipeline with the language detection
 
-1: train a text classifier with spacy-transformers and textcat and add to the second nlp-pipeline
+2: make the code more efficient
 
-2: use the predicted category of the document as the category variable in the scattertext-corpus
+3: train a text classifier with spacy-transformers and textcat and add to the second nlp-pipeline
 
-3: allow parsing from web ressources (see spacy-holmes code and beautifulsoup)
+4: use the predicted category of the document as the category variable in the scattertext-corpus
 
-4: find a way to eliminate the first spacy pipeline with the language detection
+5: allow parsing from web ressources (see spacy-holmes code and beautifulsoup)
 
-5: make the code more efficient
