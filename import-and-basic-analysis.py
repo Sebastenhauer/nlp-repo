@@ -39,6 +39,8 @@ import numpy as np
 import pandas as pd
 import collections
 import pycountry
+import pprint
+from pprint import pprint
 import scattertext as st
 import spacy
 import spacy_langdetect
@@ -409,6 +411,7 @@ def get_language(multilanguage, doc, text, default_lingo, supported_lingos):
 
 
 ######## start the pipeline :) ##############
+
 if __name__ == '__main__':
     # this is required, otherwise we get weird languages for long and untidy documents
     supported_languages = ["English", "German",
@@ -531,6 +534,15 @@ if __name__ == '__main__':
 
     doc_list.sort(key=lambda doc_list: doc_list[2])
 
+    
+    '''
+    XXX make this a function with inputs:
+    doc_list
+    supported_languages
+    languagelist
+    POS_blacklist
+    maxlength
+    '''
     filteredtxts = []
     filteredADJss = []
     filteredNOUNss = []
@@ -575,6 +587,10 @@ if __name__ == '__main__':
         filteredVERBss += filteredVERBs
         filteredADJss += filteredADJs
 
+    '''
+    XXX make this a function with inputs:
+    '''
+        
     df_doclist = pd.DataFrame(doc_list, columns=[
         'File', 'Textname', 'Sprache', 'Text'])
     df_doclist['bereinigter Text'] = filteredtxts
@@ -586,26 +602,26 @@ if __name__ == '__main__':
     print(df_doclist.shape)
     df_doclist.to_pickle(path+"/df_doclist.pkl")
 
-    import de_core_news_sm
     nlp = de_core_news_sm.load()
-    corpus = st.CorpusFromPandas(
-        df_doclist, category_col='Sprache', text_col='bereinigter Text', nlp=nlp).build()
-    # actually, the category should be sth else than the language, because if we take the language
-    # we don't get a big overlap between the categories! so ideally we would train a textcat model
-    # BEFORE and use the category-column inside pd_doclist as the category
+    try:
+        corpus = st.CorpusFromPandas(
+            df_doclist, category_col='Sprache', text_col='bereinigter Text', nlp=nlp).build()
+        # actually, the category should be sth else than the language, because if we take the language
+        # we don't get a big overlap between the categories! so ideally we would train a textcat model
+        # BEFORE and use the category-column inside pd_doclist as the category
 
-    import pprint
-    from pprint import pprint
-    term_freq_df = corpus.get_term_freq_df()
-    term_freq_df['German words'] = corpus.get_scaled_f_scores('German')
-    pprint(list(term_freq_df.sort_values(
-        by='German words', ascending=False).index[:20]))
+        term_freq_df = corpus.get_term_freq_df()
+        term_freq_df['German words'] = corpus.get_scaled_f_scores('German')
+        pprint(list(term_freq_df.sort_values(
+            by='German words', ascending=False).index[:20]))
 
-    html = st.produce_scattertext_explorer(
-        corpus,
-        category='German',  # not_category_name='English',
-        minimum_term_frequency=5, metadata=corpus.get_df()['Textname'])
+        html = st.produce_scattertext_explorer(
+            corpus,
+            category='German',  # not_category_name='English',
+            minimum_term_frequency=5, metadata=corpus.get_df()['Textname'])
 
-    fn = path+path.split("/")[-2]+'-Auswertung.html'
-    open(fn, 'wb').write(html.encode('utf-8'))
-    print('Open ' + fn + ' in Chrome or Firefox.')
+        fn = path+path.split("/")[-2]+'-Auswertung.html'
+        open(fn, 'wb').write(html.encode('utf-8'))
+        print('Open ' + fn + ' in Chrome or Firefox.')
+    except:
+        print("Only one language was given. Hence, scatterplot does not work a.t.m.")
