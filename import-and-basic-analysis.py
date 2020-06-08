@@ -96,7 +96,7 @@ def pdf_to_text(path, extensions):
 
 def get_textname(filename):
     textname = filename.split(".txt")[0]
-    textname = textname.replace('_', ' ')
+    textname = textname.replace('_', ' ').replace('-',' ')
     return textname
 
 
@@ -116,14 +116,7 @@ def clean_words(text, useful_characters):
     text = re.sub("ß", "ss", text)
     # remove weird characters
     text = ''.join(filter(lambda x: x in useful_characters, text))
-    # remove double slashes and thus http//
-    #text = re.sub("//|[\\\]", " ", text)
-    #text = re.sub(" n", " ", text)
-    # text = re.sub("|\d","",text)#remove digits
-    # text = re.sub("[\\\]", "", text)#remove backslashes
-    # text = re.sub("\s+", " ", text)  # remove empty parts like "aa     bb."
     return text
-    # see https://www.w3schools.com/python/python_regex.asp
 
 
 def is_any_lowercase(sentence):
@@ -360,54 +353,55 @@ def decide_language_detection(path, supported_languages, default_lingo):
 
 
 def get_language(multilanguage, doc, text, default_lingo, supported_lingos):
-    if len(doc.text) >= 6 and doc.text.isdigit() == False:
-
-        if multilanguage == "n":
-            textlist = text
-            langcode = doc._.language['language']
-            if langcode != "UNKNOWN":
-                langlist = languages.get(alpha_2=langcode).name
-                if langlist not in supported_lingos:
-                    langlist = default_lingo
-                    print(
-                        "Language detection probably not successfull, using default language.")
-            else:
+    '''returns a list or string of language(s) and text(s) per input text'''
+    
+    '''if len(doc.text) >= 50 and doc.text.isdigit() == False:'''
+    if multilanguage == "n":
+        textlist = text
+        langcode = doc._.language['language']
+        if langcode != "UNKNOWN":
+            langlist = languages.get(alpha_2=langcode).name
+            if langlist not in supported_lingos:
                 langlist = default_lingo
                 print(
-                    "Language detection not successfull, using default language.")
+                    "Language detection probably not successfull, using default language.")
         else:
-            langlist = []  # the list of all unique detected languages
-            textlist = []  # the list which contains the string of text for each unique languages
-            removerow = []  # just an index of rows
-            count_sents = 0
-            doc = nlp(text)
-            for sent in doc.sents:
-                count_sents += 1
-                langcode = sent._.language['language']
-                if langcode != "UNKNOWN":
-                    langname = languages.get(alpha_2=langcode).name
-                    if langname in supported_lingos:
-                        if langname not in set(langlist):
-                            langlist.append(langname)
-                            textlist.append(sent.text)
-                        else:
-                            for k in range(0, len(langlist)):
-                                if langname == langlist[k]:
-                                    textlist[k] += " "+sent.text
-            print("sum of all sentences in this doc is", count_sents)
-            for i in range(len(langlist)):
-                percentageoflingo = int(
-                    100*len(textlist[i])/len(''.join(textlist)))
-                if percentageoflingo < 2 and not len(textlist[i]) > 500:
-                    removerow.append(i)
-                    # or len(textlist[i]) < 50:
-            # wir löschen also jenen Teil des Textes, der eine der obrigen Bedingungen erfüllt
-            # reverse the order so that not the first elements
-            # are deleted before the latter ones, which would cause errors
-            for j in sorted(removerow, reverse=True):
-                del langlist[j]
-                del textlist[j]
-        return langlist, textlist
+            langlist = default_lingo
+            print(
+                "Language detection not successfull, using default language.")
+    else:
+        langlist = []  # the list of all unique detected languages
+        textlist = []  # the list which contains the string of text for each unique languages
+        removerow = []  # just an index of rows
+        count_sents = 0
+        doc = nlp(text)
+        for sent in doc.sents:
+            count_sents += 1
+            langcode = sent._.language['language']
+            if langcode != "UNKNOWN":
+                langname = languages.get(alpha_2=langcode).name
+                if langname in supported_lingos:
+                    if langname not in set(langlist):
+                        langlist.append(langname)
+                        textlist.append(sent.text)
+                    else:
+                        for k in range(0, len(langlist)):
+                            if langname == langlist[k]:
+                                textlist[k] += " "+sent.text
+        print("sum of all sentences in this doc is", count_sents)
+        for i in range(len(langlist)):
+            percentageoflingo = int(
+                100*len(textlist[i])/len(''.join(textlist)))
+            if percentageoflingo < 2 and not len(textlist[i]) > 500:
+                removerow.append(i)
+                # or len(textlist[i]) < 50:
+        # wir löschen also jenen Teil des Textes, der eine der obrigen Bedingungen erfüllt
+        # reverse the order so that not the first elements
+        # are deleted before the latter ones, which would cause errors
+        for j in sorted(removerow, reverse=True):
+            del langlist[j]
+            del textlist[j]
+    return langlist, textlist
 
 
 ######## start the pipeline :) ##############
