@@ -284,6 +284,55 @@ def pos_tokenizer(doc, nlp, POS_blacklist, maxlength, use_base=True):
         adjs = " ".join(adjs)
         return txt, nouns, verbs, adjs
 
+    
+def get_language_info(doc_list, supported_languages, languagelist, POS_blacklist, maxlength):
+    '''applies pos_tokenizer corrently on a document list'''
+    
+    filteredtxts = []
+    filteredADJss = []
+    filteredNOUNss = []
+    filteredVERBss = []
+    uniquelst = []
+
+    for lin in sorted(list(set([row[2] for row in doc_list]))):
+        nlp = get_spacy_tokenizer(
+            lin, supported_languages, higher=False)
+        texte = []
+
+        for i in range(len(languagelist)):
+            if languagelist[i] == lin:
+                texte.append(texts[i])
+
+        docs = list(nlp.pipe(texte))
+        filteredtexts = []
+        filteredNOUNs = []
+        filteredVERBs = []
+        filteredADJs = []
+        unique = []
+
+        for doc in docs:
+            filteredtxt, filteredNOUN, filteredVERB, filteredADJ = pos_tokenizer(
+                doc, nlp, POS_blacklist, maxlength)
+            filteredtexts.append(filteredtxt)
+            filteredNOUNs.append(filteredNOUN)
+            filteredVERBs.append(filteredVERB)
+            filteredADJs.append(filteredADJ)
+            uniques = []
+            for item in doc.ents:
+                if item.text not in uniques:
+                    uniques.append(item.text)
+            unique.append(uniques)
+            # maybe I should only add the ents if they belong to the nlp.vocab, because a.t.m
+            # I get wild ents for texts with wild strings.
+            # downside would be that then I have to use the "md"-spacy-model for this function
+        filteredtxts += filteredtexts
+        filteredNOUNss += filteredNOUNs
+        uniquelst += unique
+        filteredVERBss += filteredVERBs
+        filteredADJss += filteredADJs
+        
+    return (filteredtxts, filteredNOUNss, uniquelst, filteredVERBss, filteredADJss)
+    
 
 def get_spacy_tokenizer(default_lingo, supported_languages, higher):
     '''returns the nlp function corresponding to the language of a doc/corpus'''
@@ -404,13 +453,13 @@ def get_language(multilanguage, doc, text, default_lingo, supported_lingos):
     return langlist, textlist
 
 
-######## start the pipeline :) ##############
-
 if __name__ == '__main__':
-    # this is required, otherwise we get weird languages for long and untidy documents
+    ######## defining some variables ##############
+    
     supported_languages = ["English", "German",
-                           "Spanish", "Portuguese", "French", "Italian"]
-    default_language = "English"  # making English the default...
+                           "Spanish", "Portuguese", "French", "Italian"] 
+    # this is required, otherwise we get weird languages for long and untidy documents
+    default_language = "English"  # making English the default, which is used when no language is detected
     useful_characters = string.printable + \
         'äöüÄÖÜéÉèÈáÁàÀóÓòÒúÚùÙíÍìÌñÑãÃõÕêÊâÂîÎôÔûÛ'  # filtering the characters of the texts
     parsable_extensions = ['.csv', '.doc', '.docx', '.eml', '.epub', '.json',
@@ -418,12 +467,13 @@ if __name__ == '__main__':
     """ '.gif', '.jpg', '.mp3', '.tiff', '.wav', '.ps', '.html' """
     # the extensions which we try to parse to text
     maxlength = 2000000  # default would be 1m
-    minlength = 100
+    minlength = 100  # if textlen is lower, we ignore this text
     POS_blacklist = ["PUNCT", "PART", "SYM", "SPACE",
-                     "DET", "CONJ", "CCONJ", "ADP", "INTJ", "X", ""]
+                     "DET", "CONJ", "CCONJ", "ADP", "INTJ", "X", ""] # we filter out these token-types 
     # the parsing functions in use
     parsers = [titlecaps, token_replacement, url_replacement]
-    ######### Determining the directory from which to import documents #########
+    
+    # Determining the directory from which to import documents
     workingdir = os.getcwd()
     workingdir = ''.join(workingdir)
     if not workingdir.endswith("/"):
@@ -528,62 +578,7 @@ if __name__ == '__main__':
 
     doc_list.sort(key=lambda doc_list: doc_list[2])
 
-    
-    '''
-    XXX make this a function with inputs:
-    doc_list
-    supported_languages
-    languagelist
-    POS_blacklist
-    maxlength
-    '''
-    filteredtxts = []
-    filteredADJss = []
-    filteredNOUNss = []
-    filteredVERBss = []
-    uniquelst = []
-
-    for lin in sorted(list(set([row[2] for row in doc_list]))):
-        nlp = get_spacy_tokenizer(
-            lin, supported_languages, higher=False)
-        texte = []
-
-        for i in range(len(languagelist)):
-            if languagelist[i] == lin:
-                texte.append(texts[i])
-
-        docs = list(nlp.pipe(texte))
-        filteredtexts = []
-        filteredNOUNs = []
-        filteredVERBs = []
-        filteredADJs = []
-        unique = []
-
-        for doc in docs:
-            filteredtxt, filteredNOUN, filteredVERB, filteredADJ = pos_tokenizer(
-                doc, nlp, POS_blacklist, maxlength)
-            filteredtexts.append(filteredtxt)
-            filteredNOUNs.append(filteredNOUN)
-            filteredVERBs.append(filteredVERB)
-            filteredADJs.append(filteredADJ)
-            uniques = []
-            for item in doc.ents:
-                if item.text not in uniques:
-                    uniques.append(item.text)
-            unique.append(uniques)
-            # maybe I should only add the ents if they belong to the nlp.vocab, because a.t.m
-            # I get wild ents for texts with wild strings.
-            # downside would be that then I have to use the "md"-spacy-model for this function
-
-        filteredtxts += filteredtexts
-        filteredNOUNss += filteredNOUNs
-        uniquelst += unique
-        filteredVERBss += filteredVERBs
-        filteredADJss += filteredADJs
-
-    '''
-    XXX make this a function with inputs:
-    '''
+    filteredtxts, filteredNOUNss, uniquelst, filteredVERBss, filteredADJss = get_language_info(doc_list, supported_languages, languagelist, POS_blacklist, maxlength)
         
     df_doclist = pd.DataFrame(doc_list, columns=[
         'File', 'Textname', 'Sprache', 'Text'])
