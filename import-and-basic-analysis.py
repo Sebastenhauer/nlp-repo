@@ -454,6 +454,7 @@ def get_language(multilanguage, doc, text, default_lingo, supported_lingos):
 
 
 if __name__ == '__main__':
+    
     ######## defining some variables ##############
     
     supported_languages = ["English", "German",
@@ -514,6 +515,7 @@ if __name__ == '__main__':
         else:
             print("Using path ", path)
             break
+            
     # now we let the user determine if he wants to use the sentence-wise
     # language detection or the document-wise. The sentence-wise allows
     # to ignore parts of docs that contain text not of interest, such
@@ -522,6 +524,8 @@ if __name__ == '__main__':
         path, supported_languages, default_language)
     nlp.add_pipe(LanguageDetector(), name='language_detector', last=True)
 
+    ######## starting the functions / pipelines ##############
+    
     pdf_to_text(path, parsable_extensions)
     filenames_lst = [x for x in os.listdir(
         path) if x.endswith(".txt")]
@@ -588,9 +592,13 @@ if __name__ == '__main__':
     df_doclist['Adjektive'] = filteredADJss
     df_doclist['Entitäten'] = uniquelst
 
+    ######## saving the pandas data frame to path ##############
+    
     print(df_doclist.shape)
     df_doclist.to_pickle(path+"/df_doclist.pkl")
 
+    ######## an example what we can do with all that: crate scattertext html graph ##############
+    
     nlp = de_core_news_sm.load()
     try:
         corpus = st.CorpusFromPandas(
