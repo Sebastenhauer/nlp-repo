@@ -453,28 +453,9 @@ def get_language(multilanguage, doc, text, default_lingo, supported_lingos):
     return langlist, textlist
 
 
-if __name__ == '__main__':
-    
-    ######## defining some variables ##############
-    
-    supported_languages = ["English", "German",
-                           "Spanish", "Portuguese", "French", "Italian"] 
-    # this is required, otherwise we get weird languages for long and untidy documents
-    default_language = "English"  # making English the default, which is used when no language is detected
-    useful_characters = string.printable + \
-        'äöüÄÖÜéÉèÈáÁàÀóÓòÒúÚùÙíÍìÌñÑãÃõÕêÊâÂîÎôÔûÛ'  # filtering the characters of the texts
-    parsable_extensions = ['.csv', '.doc', '.docx', '.eml', '.epub', '.json',
-                           '.msg', '.odt', '.ogg', '.pdf', '.pptx', '.rtf', '.xlsx', '.xls']
-    """ '.gif', '.jpg', '.mp3', '.tiff', '.wav', '.ps', '.html' """
-    # the extensions which we try to parse to text
-    maxlength = 2000000  # default would be 1m
-    minlength = 100  # if textlen is lower, we ignore this text
-    POS_blacklist = ["PUNCT", "PART", "SYM", "SPACE",
-                     "DET", "CONJ", "CCONJ", "ADP", "INTJ", "X", ""] # we filter out these token-types 
-    # the parsing functions in use
-    parsers = [titlecaps, token_replacement, url_replacement]
-    
-    # Determining the directory from which to import documents
+def get_path(parsable_extensions)    
+    '''returns the path depending on the working directory and user input'''  
+    filenames_list = []
     workingdir = os.getcwd()
     workingdir = ''.join(workingdir)
     if not workingdir.endswith("/"):
@@ -515,16 +496,43 @@ if __name__ == '__main__':
         else:
             print("Using path ", path)
             break
-            
+	return path
+
+
+if __name__ == '__main__':
+    
+    ######## defining some variables ##############
+    
+    supported_languages = ["English", "German",
+                           "Spanish", "Portuguese", "French", "Italian"] 
+    # this is required, otherwise we get weird languages for long and untidy documents
+    default_language = "English"  # making English the default, which is used when no language is detected
+    useful_characters = string.printable + \
+        'äöüÄÖÜéÉèÈáÁàÀóÓòÒúÚùÙíÍìÌñÑãÃõÕêÊâÂîÎôÔûÛ'  # filtering the characters of the texts
+    parsable_extensions = ['.csv', '.doc', '.docx', '.eml', '.epub', '.json',
+                           '.msg', '.odt', '.ogg', '.pdf', '.pptx', '.rtf', '.xlsx', '.xls']
+    """ '.gif', '.jpg', '.mp3', '.tiff', '.wav', '.ps', '.html' """
+    # the extensions which we try to parse to text
+    maxlength = 2000000  # default would be 1m
+    minlength = 100  # if textlen is lower, we ignore this text
+    POS_blacklist = ["PUNCT", "PART", "SYM", "SPACE",
+                     "DET", "CONJ", "CCONJ", "ADP", "INTJ", "X", ""] # we filter out these token-types 
+    # the parsing functions in use
+    parsers = [titlecaps, token_replacement, url_replacement]
+   	
+    # Determining the directory from which to import documents
+	path = get_path(parsable_extensions)
+                    
     # now we let the user determine if he wants to use the sentence-wise
     # language detection or the document-wise. The sentence-wise allows
     # to ignore parts of docs that contain text not of interest, such
     # as metadata in english for a german document or so
     multilanguage, nlp = decide_language_detection(
         path, supported_languages, default_language)
-    nlp.add_pipe(LanguageDetector(), name='language_detector', last=True)
+
 
     ######## starting the functions / pipelines ##############
+    nlp.add_pipe(LanguageDetector(), name='language_detector', last=True)
     
     pdf_to_text(path, parsable_extensions)
     filenames_lst = [x for x in os.listdir(
