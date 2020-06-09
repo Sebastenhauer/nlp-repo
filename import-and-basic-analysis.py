@@ -33,28 +33,27 @@ path # will be defined by function get_path
 
 """
 
-import textract
-import fitz
 import string
 import re
 import sys
+import collections
 import os
 from os import system, listdir
 import numpy as np
 import pandas as pd
-import collections
 import pycountry
+from pycountry import languages
 import pprint
 from pprint import pprint
+import textract
+import fitz
 import scattertext as st
 import spacy
 import spacy_langdetect
-from pycountry import languages
 from spacy import matcher
 from spacy import tokens
 from spacy.matcher import Matcher
 from spacy.tokens import Token
-
 from spacy_langdetect import LanguageDetector
 
 
