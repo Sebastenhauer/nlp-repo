@@ -540,6 +540,11 @@ if __name__ == '__main__':
     nlp.add_pipe(LanguageDetector(), name='language_detector', last=True)
     
     pdf_to_text(path, parsable_extensions)
+
+	### XXX make it a function.
+	# input: path, minlength, nlp, multilanguage, default_language, supported_languages
+	# output: filenames, textnames, languagelist, texts
+	
     filenames_lst = [x for x in os.listdir(
         path) if x.endswith(".txt")]
 
@@ -589,7 +594,9 @@ if __name__ == '__main__':
         else:
             print("something went wrong")
         counter += 1
-
+	
+	### XXX make it a function 
+	
     doc_list = list(
         zip(filenames, textnames, languagelist, texts))
 
