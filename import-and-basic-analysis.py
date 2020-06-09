@@ -1,31 +1,36 @@
 
 """
-
 input:
-
 directory which contains documents of various file formats. supports languages German, English as well as the latin languages
+
 output:
-
 pandas dataframe with basic analysis and linguistic features for each document (or each language of each document)
-
 html graphical summary of the dataframe
+
 The script does basically the following:
-
 1: let the user decide from which directory documents should be imported
-
 2: transform pdfs, docx and some other formated documents into txt
-
 3: let the user specify if single documents in the directory are written in more than one language
-
 4: depending on the answer to 3, the language detection is applied on the entire document or on each sentence of the doc individually (= considerably more costly and not always accurate, especially if the document is not well parsed)
-
 5: apply some cleaning functions, adapted from the package nlpre
-
 6: define textname, language, cleaned text (= subselect certain linguistic elements), nouns, verbs, adjectives and named entities
-
 7: store this data along with the original texts in a pandas dataframe in the directory from which the documents are parsed
-
 8: output a graphical summary of the documents with the package scattertext (does not work currently if only one language is predicted!)
+
+variables:
+supported_languages # predefined as = ["English", "German",
+					   "Spanish", "Portuguese", "French", "Italian"] 
+default_language # predefined as = "English"
+useful_characters # predefined as = string.printable + \
+	'äöüÄÖÜéÉèÈáÁàÀóÓòÒúÚùÙíÍìÌñÑãÃõÕêÊâÂîÎôÔûÛ'  # filtering the characters of the texts
+parsable_extensions # predefined as ['.csv', '.doc', '.docx', '.eml', '.epub', '.json',
+					   '.msg', '.odt', '.ogg', '.pdf', '.pptx', '.rtf', '.xlsx', '.xls']
+maxlength # predefined as = 2000000  # default would be 1m
+minlength # predefined as = 100  # if textlen is lower, we ignore this text
+POS_blacklist # predefined as = ["PUNCT", "PART", "SYM", "SPACE",
+				 "DET", "CONJ", "CCONJ", "ADP", "INTJ", "X", ""] 
+path # will be defined by function get_path
+
 """
 
 import textract
@@ -519,8 +524,9 @@ if __name__ == '__main__':
                      "DET", "CONJ", "CCONJ", "ADP", "INTJ", "X", ""] # we filter out these token-types 
     # the parsing functions in use
     parsers = [titlecaps, token_replacement, url_replacement]
-   	
+   
     # Determining the directory from which to import documents
+
 	path = get_path(parsable_extensions)
                     
     # now we let the user determine if he wants to use the sentence-wise
