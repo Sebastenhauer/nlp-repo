@@ -18,18 +18,18 @@ The script does basically the following:
 8: output a graphical summary of the documents with the package scattertext (does not work currently if only one language is predicted!)
 
 parameters:
-supported_languages # predefined as = ["English", "German",
+supported_languages # set to = ["English", "German",
 					   "Spanish", "Portuguese", "French", "Italian"] 
-default_language # predefined as = "English"
-useful_characters # predefined as = string.printable + \
-	'äöüÄÖÜéÉèÈáÁàÀóÓòÒúÚùÙíÍìÌñÑãÃõÕêÊâÂîÎôÔûÛ'  # filtering the characters of the texts
-parsable_extensions # predefined as ['.csv', '.doc', '.docx', '.eml', '.epub', '.json',
+default_language # set to = "English"
+useful_characters # set to = string.printable + \
+	'äöüÄÖÜéÉèÈáÁàÀóÓòÒúÚùÙíÍìÌñÑãÃõÕêÊâÂîÎôÔûÛ' 
+parsable_extensions # set to ['.csv', '.doc', '.docx', '.eml', '.epub', '.json',
 					   '.msg', '.odt', '.ogg', '.pdf', '.pptx', '.rtf', '.xlsx', '.xls']
-maxlength # predefined as = 2000000  # default would be 1m
-minlength # predefined as = 100  # if textlen is lower, we ignore this text
-POS_blacklist # predefined as = ["PUNCT", "PART", "SYM", "SPACE",
+maxlength # set to = 2000000  # default would be 1m
+minlength # set to = 100  # if textlen is lower, we ignore this text
+POS_blacklist # set to = ["PUNCT", "PART", "SYM", "SPACE",
 				 "DET", "CONJ", "CCONJ", "ADP", "INTJ", "X", ""] 
-path # will be defined by function get_path
+path # defined by function get_path
 
 """
 
