@@ -17,7 +17,7 @@ The script does basically the following:
 7: store this data along with the original texts in a pandas dataframe in the directory from which the documents are parsed
 8: output a graphical summary of the documents with the package scattertext (does not work currently if only one language is predicted!)
 
-variables:
+parameters:
 supported_languages # predefined as = ["English", "German",
 					   "Spanish", "Portuguese", "French", "Italian"] 
 default_language # predefined as = "English"
