@@ -58,6 +58,6 @@ further development path:
 6: add further useful functions to the pipeline such as a specific spacy-matcher, train an ner ... 
 
 
-lexika is from:
+lexika are from:
 - 
 https://sites.google.com/site/datascienceslab/projects/multilingualsentiment 
