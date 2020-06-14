@@ -247,6 +247,8 @@ def pos_tokenizer(doc, nlp, POS_blacklist, maxlength, use_base=True):
                     continue
                 if token.pos_ in POS_blacklist:
                     continue
+                if token.is_stop == True or token.is_alpha == False:
+                    continue
                 word = token.text
                 if (
                     use_base
