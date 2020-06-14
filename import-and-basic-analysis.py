@@ -247,7 +247,7 @@ def pos_tokenizer(doc, nlp, POS_blacklist, maxlength, use_base=True):
                     continue
                 if token.pos_ in POS_blacklist:
                     continue
-                #this condition can be deactivated if preferred:
+                # this condition can be deactivated if preferred:
                 if token.is_stop == True or token.is_alpha == False:
                     continue
                 word = token.text
@@ -291,18 +291,52 @@ def pos_tokenizer(doc, nlp, POS_blacklist, maxlength, use_base=True):
         return txt, nouns, verbs, adjs
 
 
+def get_polarlex(lingo):
+    language = pycountry.languages.get(name=lingo)
+    langcode = language.alpha_2
+    while True:
+        if os.path.exists("lexika/"):
+            lexikapath = "lexika/"
+            break
+        else:
+            print("Input directory of lexica:")
+            npt = input()
+            if os.path.exists(npt):
+                if npt.endswith("/"):
+                    lexikapath = npt
+                else:
+                    lexikapath = npt+"/"
+                break
+            else:
+                continue
+    poslexname = "positive_words_"+langcode+".txt"
+    neglexname = "negative_words_"+langcode+".txt"
+    with open(lexikapath+poslexname, "r", encoding="utf8", errors='ignore') as current_file:
+        postxt = current_file.read()
+        postxt = postxt.split("\n")
+    with open(lexikapath+neglexname, "r", encoding="utf8", errors='ignore') as current_file:
+        negtxt = current_file.read()
+        negtxt = negtxt.split("\n")
+    return postxt, negtxt
+
+
 def get_language_info(doc_list, supported_languages, languagelist, POS_blacklist, maxlength):
     '''applies pos_tokenizer corrently on a document list'''
 
+    lenght = []
     filteredtxts = []
     filteredADJss = []
     filteredNOUNss = []
     filteredVERBss = []
     uniquelst = []
+    poslex = []
+    neglex = []
+    polarscores = []
 
     for lin in sorted(list(set([row[2] for row in doc_list]))):
         nlp = get_spacy_tokenizer(
             lin, supported_languages, higher=False)
+        postxt, negtxt = get_polarlex(lin)
         texte = []
 
         for i in range(len(languagelist)):
@@ -315,8 +349,13 @@ def get_language_info(doc_list, supported_languages, languagelist, POS_blacklist
         filteredVERBs = []
         filteredADJs = []
         unique = []
-
+        polarscoree = []
+        poslexdoce = []
+        neglexdoce = []
+        lengt = []
         for doc in docs:
+            leng = len(doc)
+            lengt.append(str(leng))
             filteredtxt, filteredNOUN, filteredVERB, filteredADJ = pos_tokenizer(
                 doc, nlp, POS_blacklist, maxlength)
             filteredtexts.append(filteredtxt)
@@ -324,20 +363,39 @@ def get_language_info(doc_list, supported_languages, languagelist, POS_blacklist
             filteredVERBs.append(filteredVERB)
             filteredADJs.append(filteredADJ)
             uniques = []
+            poslexdoc = ""
+            neglexdoc = ""
             for item in doc.ents:
                 if item.text not in uniques:
                     uniques.append(item.text)
             unique.append(uniques)
+            for token in doc:
+                if token.text in postxt:
+                    # if token.text not in poslexdoc:
+                    poslexdoc += " "+token.text
+                if token.text in negtxt:
+                    # if token.text not in neglexdoc:
+                    # not used, otherwise polarscore is inaccurate
+                    neglexdoc += " "+token.text
+
+            polarscore = str(round(((len(poslexdoc)+len(neglexdoc))/len(doc)), 2))
+            polarscoree.append(polarscore)
+            poslexdoce.append(poslexdoc)
+            neglexdoce.append(neglexdoc)
             # maybe I should only add the ents if they belong to the nlp.vocab, because a.t.m
             # I get wild ents for texts with wild strings.
             # downside would be that then I have to use the "md"-spacy-model for this function
+        lenght += lengt
         filteredtxts += filteredtexts
         filteredNOUNss += filteredNOUNs
         uniquelst += unique
         filteredVERBss += filteredVERBs
         filteredADJss += filteredADJs
+        poslex += poslexdoce
+        neglex += neglexdoce
+        polarscores += polarscoree
 
-    return (filteredtxts, filteredNOUNss, uniquelst, filteredVERBss, filteredADJss)
+    return (lenght, filteredtxts, filteredNOUNss, uniquelst, filteredVERBss, filteredADJss, poslex, neglex, polarscores)
 
 
 def get_spacy_tokenizer(default_lingo, supported_languages, higher):
@@ -398,7 +456,9 @@ def decide_language_detection(path, supported_languages, default_lingo):
         except ValueError:
             print("Sorry, I didn't understand that.")
             continue
-        if multilanguage not in ["y", "n"]:
+        if multilanguage == "exit":
+            break
+        elif multilanguage not in ["y", "n"]:
             print("You gave a wrong input. Try again")
         else:
             print("Thank you for your input. Language Detection starting now")
@@ -443,7 +503,6 @@ def get_language(multilanguage, doc, text, default_lingo, supported_lingos):
                         for k in range(0, len(langlist)):
                             if langname == langlist[k]:
                                 textlist[k] += " "+sent.text
-        print("sum of all sentences in this doc is", count_sents)
         for i in range(len(langlist)):
             percentageoflingo = int(
                 100*len(textlist[i])/len(''.join(textlist)))
@@ -468,11 +527,13 @@ def get_path(parsable_extensions):
         workingdir = workingdir + "/"
     elif not workingdir.startswith("/"):
         workingdir = "/" + workingdir
-    print("Current working directory is {}. Do you want to analyse documents from your working directory? Press Enter if so. Otherwise indicate the desired subfolder from working directory".format(os.getcwd()))
+    print("Current working directory is {}. Do you want to analyse documents from your working directory? Press Enter if so. Otherwise indicate the desired subfolder from working directory. Input exit to leave the module".format(os.getcwd()))
     while True:
         datenablage = input()
         """datenablage = "daten/neu"""
         # 1. zuerst den richtigen Pfad bestimmen
+        if datenablage == "exit":
+            break
         if datenablage == "":
             path = workingdir
         else:
@@ -603,16 +664,29 @@ if __name__ == '__main__':
 
     doc_list.sort(key=lambda doc_list: doc_list[2])
 
-    filteredtxts, filteredNOUNss, uniquelst, filteredVERBss, filteredADJss = get_language_info(
+    length, filteredtxts, filteredNOUNss, uniquelst, filteredVERBss, filteredADJss, poslex, neglex, polarscores = get_language_info(
         doc_list, supported_languages, languagelist, POS_blacklist, maxlength)
 
     df_doclist = pd.DataFrame(doc_list, columns=[
         'File', 'Textname', 'Sprache', 'Text'])
+    df_doclist['Textlänge'] = length
     df_doclist['bereinigter Text'] = filteredtxts
     df_doclist['Substantive'] = filteredNOUNss
     df_doclist['Verben'] = filteredVERBss
     df_doclist['Adjektive'] = filteredADJss
     df_doclist['Entitäten'] = uniquelst
+    df_doclist['Positive Wörter'] = poslex
+    df_doclist['Negative Wörter'] = neglex
+    df_doclist['Polarität'] = polarscores
+
+    polarcat = []
+    for score in polarscores:
+        if float(score) < 0.1:
+            polarcat.append("neutral")
+        else:
+            polarcat.append("emotional")
+    df_doclist['Polaritätskategorie'] = polarcat
+
 
     ######## saving the pandas data frame to path ##############
 
