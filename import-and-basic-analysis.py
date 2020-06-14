@@ -247,12 +247,12 @@ def pos_tokenizer(doc, nlp, POS_blacklist, maxlength, use_base=True):
                     continue
                 if token.pos_ in POS_blacklist:
                     continue
+                #this condition can be deactivated if preferred:
                 if token.is_stop == True or token.is_alpha == False:
                     continue
                 word = token.text
                 if (
                     use_base
-                    # vllt muss "k" noch removed werden
                     and not keep_root(token, k)
                     and token.pos_ != "PRON"
                 ):
