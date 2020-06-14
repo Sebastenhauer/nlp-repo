@@ -100,7 +100,7 @@ def pdf_to_text(path, extensions):
 
 def get_textname(filename):
     textname = filename.split(".txt")[0]
-    textname = textname.replace('_', ' ').replace('-',' ')
+    textname = textname.replace('_', ' ').replace('-', ' ')
     return textname
 
 
@@ -288,10 +288,10 @@ def pos_tokenizer(doc, nlp, POS_blacklist, maxlength, use_base=True):
         adjs = " ".join(adjs)
         return txt, nouns, verbs, adjs
 
-    
+
 def get_language_info(doc_list, supported_languages, languagelist, POS_blacklist, maxlength):
     '''applies pos_tokenizer corrently on a document list'''
-    
+
     filteredtxts = []
     filteredADJss = []
     filteredNOUNss = []
@@ -334,9 +334,9 @@ def get_language_info(doc_list, supported_languages, languagelist, POS_blacklist
         uniquelst += unique
         filteredVERBss += filteredVERBs
         filteredADJss += filteredADJs
-        
+
     return (filteredtxts, filteredNOUNss, uniquelst, filteredVERBss, filteredADJss)
-    
+
 
 def get_spacy_tokenizer(default_lingo, supported_languages, higher):
     '''returns the nlp function corresponding to the language of a doc/corpus'''
@@ -407,7 +407,7 @@ def decide_language_detection(path, supported_languages, default_lingo):
 
 def get_language(multilanguage, doc, text, default_lingo, supported_lingos):
     '''returns a list or string of language(s) and text(s) per input text'''
-    
+
     '''if len(doc.text) >= 50 and doc.text.isdigit() == False:'''
     if multilanguage == "n":
         textlist = text
@@ -457,8 +457,8 @@ def get_language(multilanguage, doc, text, default_lingo, supported_lingos):
     return langlist, textlist
 
 
-def get_path(parsable_extensions)    
-    '''returns the path depending on the working directory and user input'''  
+def get_path(parsable_extensions):
+    '''returns the path depending on the working directory and user input'''
     filenames_list = []
     workingdir = os.getcwd()
     workingdir = ''.join(workingdir)
@@ -500,17 +500,18 @@ def get_path(parsable_extensions)
         else:
             print("Using path ", path)
             break
-	return path
+    return path
 
 
 if __name__ == '__main__':
-    
+
     ######## defining some variables ##############
-    
+
     supported_languages = ["English", "German",
-                           "Spanish", "Portuguese", "French", "Italian"] 
+                           "Spanish", "Portuguese", "French", "Italian"]
     # this is required, otherwise we get weird languages for long and untidy documents
-    default_language = "English"  # making English the default, which is used when no language is detected
+    # making English the default, which is used when no language is detected
+    default_language = "English"
     useful_characters = string.printable + \
         'äöüÄÖÜéÉèÈáÁàÀóÓòÒúÚùÙíÍìÌñÑãÃõÕêÊâÂîÎôÔûÛ'  # filtering the characters of the texts
     parsable_extensions = ['.csv', '.doc', '.docx', '.eml', '.epub', '.json',
@@ -520,14 +521,13 @@ if __name__ == '__main__':
     maxlength = 2000000  # default would be 1m
     minlength = 100  # if textlen is lower, we ignore this text
     POS_blacklist = ["PUNCT", "PART", "SYM", "SPACE",
-                     "DET", "CONJ", "CCONJ", "ADP", "INTJ", "X", ""] # we filter out these token-types 
+                     "DET", "CONJ", "CCONJ", "ADP", "INTJ", "X", ""]  # we filter out these token-types
     # the parsing functions in use
     parsers = [titlecaps, token_replacement, url_replacement]
-   
-    # Determining the directory from which to import documents
 
-	path = get_path(parsable_extensions)
-                    
+    # Determining the directory from which to import documents
+    path = get_path(parsable_extensions)
+
     # now we let the user determine if he wants to use the sentence-wise
     # language detection or the document-wise. The sentence-wise allows
     # to ignore parts of docs that contain text not of interest, such
@@ -535,16 +535,15 @@ if __name__ == '__main__':
     multilanguage, nlp = decide_language_detection(
         path, supported_languages, default_language)
 
-
     ######## starting the functions / pipelines ##############
     nlp.add_pipe(LanguageDetector(), name='language_detector', last=True)
-    
+
     pdf_to_text(path, parsable_extensions)
 
-	### XXX make it a function.
-	# input: path, minlength, nlp, multilanguage, default_language, supported_languages
-	# output: filenames, textnames, languagelist, texts
-	
+    # XXX make it a function.
+    # input: path, minlength, nlp, multilanguage, default_language, supported_languages
+    # output: filenames, textnames, languagelist, texts
+
     filenames_lst = [x for x in os.listdir(
         path) if x.endswith(".txt")]
 
@@ -594,16 +593,17 @@ if __name__ == '__main__':
         else:
             print("something went wrong")
         counter += 1
-	
-	### XXX make it a function 
-	
+
+        # XXX make it a function
+
     doc_list = list(
         zip(filenames, textnames, languagelist, texts))
 
     doc_list.sort(key=lambda doc_list: doc_list[2])
 
-    filteredtxts, filteredNOUNss, uniquelst, filteredVERBss, filteredADJss = get_language_info(doc_list, supported_languages, languagelist, POS_blacklist, maxlength)
-        
+    filteredtxts, filteredNOUNss, uniquelst, filteredVERBss, filteredADJss = get_language_info(
+        doc_list, supported_languages, languagelist, POS_blacklist, maxlength)
+
     df_doclist = pd.DataFrame(doc_list, columns=[
         'File', 'Textname', 'Sprache', 'Text'])
     df_doclist['bereinigter Text'] = filteredtxts
@@ -613,13 +613,12 @@ if __name__ == '__main__':
     df_doclist['Entitäten'] = uniquelst
 
     ######## saving the pandas data frame to path ##############
-    
+
     print(df_doclist.shape)
     df_doclist.to_pickle(path+"/df_doclist.pkl")
 
     ######## an example what we can do with all that: crate scattertext html graph ##############
-    
-    nlp = de_core_news_sm.load()
+    nlp = get_spacy_tokenizer("German", supported_languages, higher=False)
     try:
         corpus = st.CorpusFromPandas(
             df_doclist, category_col='Sprache', text_col='bereinigter Text', nlp=nlp).build()
