@@ -378,7 +378,8 @@ def get_language_info(doc_list, supported_languages, languagelist, POS_blacklist
                     # not used, otherwise polarscore is inaccurate
                     neglexdoc += " "+token.text
 
-            polarscore = str(round(((len(poslexdoc)+len(neglexdoc))/len(doc)), 2))
+            polarscore = str(
+                round(((len(poslexdoc)+len(neglexdoc))/len(doc)), 2))
             polarscoree.append(polarscore)
             poslexdoce.append(poslexdoc)
             neglexdoce.append(neglexdoc)
@@ -686,7 +687,6 @@ if __name__ == '__main__':
         else:
             polarcat.append("emotional")
     df_doclist['Polaritätskategorie'] = polarcat
-
 
     ######## saving the pandas data frame to path ##############
 
