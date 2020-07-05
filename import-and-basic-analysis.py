@@ -321,7 +321,13 @@ def get_polarlex(lingo):
 
 
 def get_language_info(doc_list, supported_languages, languagelist, POS_blacklist, maxlength):
-    '''applies pos_tokenizer corrently on a document list'''
+    '''applies pos_tokenizer corrently on a document list
+    doc_list is the lable with texts, textnames...
+    supported_languages is a list
+    languagelist is a column in doc_list
+    POS_blacklist is a list of POS-tags that are omitted in the function pos_tokenizer
+    maxlength is numeric
+    '''
 
     lenght = []
     filteredtxts = []
