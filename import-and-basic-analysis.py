@@ -26,7 +26,7 @@ useful_characters # set to = string.printable + \
 parsable_extensions # set to ['.csv', '.doc', '.docx', '.eml', '.epub', '.json',
 					   '.msg', '.odt', '.ogg', '.pdf', '.pptx', '.rtf', '.xlsx', '.xls']
 # set to = 2000000  # default would be 1m
-minlength # set to = 100  # if textlen is lower, we ignore this text
+minlength_of_text # set to = 100  # if textlen is lower, we ignore this text
 POS_blacklist # set to = ["PUNCT", "PART", "SYM", "SPACE",
 				 "DET", "CONJ", "CCONJ", "ADP", "INTJ", "X", ""] 
 path # defined by function get_path
@@ -62,7 +62,247 @@ os.system('which python')
 os.system('which pip')
 sys.executable
 
+
+def main():
+    ######## defining some variables ##############
+    supported_languages = ["English", "German",
+                           "Spanish", "Portuguese", "French", "Italian"]
+    # this is required, otherwise we get weird languages for long and untidy documents
+    # making English the default, which is used when no language is detected
+    default_language = "English"
+    useful_characters = string.printable + \
+        'äöüÄÖÜéÉèÈáÁàÀóÓòÒúÚùÙíÍìÌñÑãÃõÕêÊâÂîÎôÔûÛ'  # filtering the characters of the texts
+    parsable_extensions = ['.csv', '.doc', '.docx', '.eml', '.epub', '.json',
+                           '.msg', '.odt', '.ogg', '.pdf', '.pptx', '.rtf', '.xlsx', '.xls']
+    """ '.gif', '.jpg', '.mp3', '.tiff', '.wav', '.ps', '.html' """
+    # the extensions which we try to parse to text
+    doc_maxlength = 2000000  # default would be 1m
+    minlength_of_text = 100  # if textlen is lower, we ignore this text
+    POS_blacklist = ["PUNCT", "PART", "SYM", "SPACE",
+                     "DET", "CONJ", "CCONJ", "ADP", "INTJ", "X", ""]  # we filter out these token-types
+    # the parsing functions in use
+    parsers = [titlecaps, token_replacement, url_replacement]
+
+    # Determining the directory from which to import documents
+    path = get_path(parsable_extensions)
+
+    # now we let the user determine if he wants to use the sentence-wise
+    # language detection or the document-wise. The sentence-wise allows
+    # to ignore parts of docs that contain text not of interest, such
+    # as metadata in english for a german document or so
+    multilanguage, nlp = decide_language_detection(
+        path, supported_languages, default_language)
+
+    ######## starting the functions / pipelines ##############
+    nlp.add_pipe(LanguageDetector(), name='language_detector', last=True)
+
+    pdf_to_text(path, parsable_extensions)
+
+    doc_list = documents_dataframe(path, minlength_of_text, doc_maxlength,
+                                   nlp, multilanguage, default_language, supported_languages, parsers, useful_characters)
+    df_doclist = get_all_text_info(
+        doc_list, supported_languages, POS_blacklist, doc_maxlength)
+
+    ######## saving the pandas data frame to path #############
+
+    print(df_doclist.shape)
+    df_doclist.to_pickle(path+"/df_doclist.pkl")
+
+    ######## an example what we can do with all that: crate scattertext html graph ##############
+    nlp = get_spacy_tokenizer("German", supported_languages, higher=False)
+    try:
+        corpus = st.CorpusFromPandas(
+            df_doclist, category_col='Sprache', text_col='bereinigter Text', nlp=nlp).build()
+        # actually, the category should be sth else than the language, because if we take the language
+        # we don't get a big overlap between the categories! so ideally we would train a textcat model
+        # BEFORE and use the category-column inside pd_doclist as the category
+
+        term_freq_df = corpus.get_term_freq_df()
+        term_freq_df['German words'] = corpus.get_scaled_f_scores('German')
+        pprint("Most unique German words are" + list(term_freq_df.sort_values(
+            by='German words', ascending=False).index[:20]))
+
+        html = st.produce_scattertext_explorer(
+            corpus,
+            category='German',  # not_category_name='English',
+            minimum_term_frequency=5, metadata=corpus.get_df()['Textname'])
+
+        fn = path+path.split("/")[-2]+'-Auswertung.html'
+        open(fn, 'wb').write(html.encode('utf-8'))
+        print('Open ' + fn + ' in Chrome or Firefox.')
+    except:
+        print("Only one language was given. Hence, scatterplot does not work a.t.m.")
+
+
 ######## Define Functions ##############
+
+
+def documents_dataframe(path, minlength_of_text, doc_maxlength, nlp, multilanguage, default_language, supported_languages, parsers, useful_characters):
+    '''outputs an array which contains rows of the documents' texts, corresponding filenames, textnames and languages'''
+
+    filenames_lst = [x for x in os.listdir(
+        path) if x.endswith(".txt")]
+
+    filenames = []
+    textnames = []
+    filenames_list = []
+    textnames_list = []
+    languagelist = []
+    textslist = []
+
+    for i in range(len(filenames_lst)):
+        filename = str(filenames_lst[i])
+        textname = get_textname(filenames_lst[i])
+        doc_text = import_doc(path, filename, useful_characters)
+        if len(doc_text) > minlength_of_text:
+            textslist.append(doc_text)
+        filenames_list.append(filename)
+        textnames_list.append(textname)
+
+    with nlp.disable_pipes("ner", "tagger"):
+        nlp.max_length = doc_maxlength
+        docs = list(nlp.pipe(textslist))
+
+    counter = 0
+    texts = []
+
+    for doc in docs:
+        for funct in parsers:
+            text_of_doc = funct(doc)
+        language, text, = get_language(multilanguage, doc,
+                                       text_of_doc, default_language,
+                                       supported_languages)
+        if type(language) == list:
+            '''textnew = [] ???'''
+            for j in range(len(language)):
+                filenames.append(filenames_list[counter])
+                textnames.append(textnames_list[counter])
+            languagelist += language
+            texts += text
+        elif type(language) == str:
+            filenames = filenames_list
+            textnames = textnames_list
+            languagelist.append(language)
+            for funct in parsers:
+                text = funct(doc)
+            texts.append(text)
+        else:
+            print("something went wrong")
+        counter += 1
+
+    doc_list = list(
+        zip(filenames, textnames, languagelist, texts))
+
+    doc_list.sort(key=lambda doc_list: doc_list[2])
+    return doc_list
+
+
+def get_all_text_info(doc_list, supported_languages, POS_blacklist, doc_maxlength):
+    '''applies all functions that retrieve info from the documents texts
+    doc_list is the dataframe with texts, textnames and so on
+    supported_languages is the list of supported languages
+    POS_blacklist is a list of POS-tags that are omitted in the function pos_tokenizer
+    doc_maxlength is the maximum number of tokens within a document that spacy processes 
+    '''
+
+    length = []
+    filteredtxts = []
+    filteredADJss = []
+    filteredNOUNss = []
+    filteredVERBss = []
+    uniquelst = []
+    poslex = []
+    neglex = []
+    polarscores = []
+
+    for lin in sorted(list(set([row[2] for row in doc_list]))):
+        nlp = get_spacy_tokenizer(
+            lin, supported_languages, higher=False)
+        postxt, negtxt = get_polarlex(lin)
+        texte = []
+
+        for i in range(len([row[2] for row in doc_list])):
+            if [row[2] for row in doc_list][i] == lin:
+                texte.append([row[3] for row in doc_list][i])
+
+        docs = list(nlp.pipe(texte))
+        filteredtexts = []
+        filteredNOUNs = []
+        filteredVERBs = []
+        filteredADJs = []
+        unique = []
+        polarscoree = []
+        poslexdoce = []
+        neglexdoce = []
+        length_of_docs_per_language = []
+        for doc in docs:
+            length_of_doc = len(doc)
+            length_of_docs_per_language.append(str(length_of_doc))
+            filteredtxt, filteredNOUN, filteredVERB, filteredADJ = pos_tokenizer(
+                doc, nlp, POS_blacklist, doc_maxlength)
+            filteredtexts.append(filteredtxt)
+            filteredNOUNs.append(filteredNOUN)
+            filteredVERBs.append(filteredVERB)
+            filteredADJs.append(filteredADJ)
+            uniques = []
+            poslexdoc = ""
+            neglexdoc = ""
+            for item in doc.ents:
+                if item.text not in uniques:
+                    uniques.append(item.text)
+            unique.append(uniques)
+            for token in doc:
+                if token.text in postxt:
+                    # if token.text not in poslexdoc:
+                    poslexdoc += " "+token.text
+                if token.text in negtxt:
+                    # if token.text not in neglexdoc:
+                    # not used, otherwise polarscore is inaccurate
+                    neglexdoc += " "+token.text
+
+            polarscore = str(
+                round(((len(poslexdoc)+len(neglexdoc))/len(doc)), 2))
+            polarscoree.append(polarscore)
+            poslexdoce.append(poslexdoc)
+            neglexdoce.append(neglexdoc)
+            # maybe I should only add the ents if they belong to the nlp.vocab, because a.t.m
+            # I get wild ents for texts with wild strings.
+            # downside would be that then I have to use the "md"-spacy-model for this function
+        length += length_of_docs_per_language
+        filteredtxts += filteredtexts
+        filteredNOUNss += filteredNOUNs
+        uniquelst += unique
+        filteredVERBss += filteredVERBs
+        filteredADJss += filteredADJs
+        poslex += poslexdoce
+        neglex += neglexdoce
+        polarscores += polarscoree
+
+    df_doclist = pd.DataFrame(doc_list, columns=[
+        'File', 'Textname', 'Sprache', 'Text'])
+
+    # now we put all the lists we created into a dataframe
+    df_doclist['Textlänge'] = length
+    df_doclist['bereinigter Text'] = filteredtxts
+    df_doclist['Substantive'] = filteredNOUNss
+    df_doclist['Verben'] = filteredVERBss
+    df_doclist['Adjektive'] = filteredADJss
+    df_doclist['Entitäten'] = uniquelst
+    df_doclist['Positive Wörter'] = poslex
+    df_doclist['Negative Wörter'] = neglex
+    df_doclist['Polarität'] = polarscores
+
+    # now we add a categorical variable, that is set to "emotional" if pocarscores for this
+    # text is >.1
+    polarcat = []
+    for score in polarscores:
+        if float(score) < 0.4:
+            polarcat.append("neutral")
+        else:
+            polarcat.append("emotional")
+    df_doclist['Polaritätskategorie'] = polarcat
+
+    return (df_doclist)
 
 
 def pdf_to_text(path, extensions):
@@ -104,12 +344,15 @@ def get_textname(filename):
     return textname
 
 
-def import_doc(path, filename):
+def import_doc(path, filename, useful_characters):
     """simply importing the txtfiles"""
     title_path = (path+filename)
     with open(title_path, "r", encoding="utf8", errors='ignore') as current_file:
         text = current_file.read()  # get it directly clean. optional if using nlpre!
-        # text = clean_words(text)
+
+    # WHY NOT USED???
+    text = clean_words(text, useful_characters)
+
     return text
 
 
@@ -320,91 +563,6 @@ def get_polarlex(lingo):
     return postxt, negtxt
 
 
-def get_all_text_info(doc_list, supported_languages, languagelist, POS_blacklist, doc_maxlength):
-    '''applies pos_tokenizer corrently on a document list
-    doc_list is the lable with texts, textnames...
-    supported_languages is a list
-    languagelist is a column in doc_list
-    POS_blacklist is a list of POS-tags that are omitted in the function pos_tokenizer
-    doc_maxlength is the maximum number of tokens within a document that spacy processes 
-    '''
-
-    lenght = []
-    filteredtxts = []
-    filteredADJss = []
-    filteredNOUNss = []
-    filteredVERBss = []
-    uniquelst = []
-    poslex = []
-    neglex = []
-    polarscores = []
-
-    for lin in sorted(list(set([row[2] for row in doc_list]))):
-        nlp = get_spacy_tokenizer(
-            lin, supported_languages, higher=False)
-        postxt, negtxt = get_polarlex(lin)
-        texte = []
-
-        for i in range(len(languagelist)):
-            if languagelist[i] == lin:
-                texte.append(texts[i])
-
-        docs = list(nlp.pipe(texte))
-        filteredtexts = []
-        filteredNOUNs = []
-        filteredVERBs = []
-        filteredADJs = []
-        unique = []
-        polarscoree = []
-        poslexdoce = []
-        neglexdoce = []
-        lengt = []
-        for doc in docs:
-            leng = len(doc)
-            lengt.append(str(leng))
-            filteredtxt, filteredNOUN, filteredVERB, filteredADJ = pos_tokenizer(
-                doc, nlp, POS_blacklist, doc_maxlength)
-            filteredtexts.append(filteredtxt)
-            filteredNOUNs.append(filteredNOUN)
-            filteredVERBs.append(filteredVERB)
-            filteredADJs.append(filteredADJ)
-            uniques = []
-            poslexdoc = ""
-            neglexdoc = ""
-            for item in doc.ents:
-                if item.text not in uniques:
-                    uniques.append(item.text)
-            unique.append(uniques)
-            for token in doc:
-                if token.text in postxt:
-                    # if token.text not in poslexdoc:
-                    poslexdoc += " "+token.text
-                if token.text in negtxt:
-                    # if token.text not in neglexdoc:
-                    # not used, otherwise polarscore is inaccurate
-                    neglexdoc += " "+token.text
-
-            polarscore = str(
-                round(((len(poslexdoc)+len(neglexdoc))/len(doc)), 2))
-            polarscoree.append(polarscore)
-            poslexdoce.append(poslexdoc)
-            neglexdoce.append(neglexdoc)
-            # maybe I should only add the ents if they belong to the nlp.vocab, because a.t.m
-            # I get wild ents for texts with wild strings.
-            # downside would be that then I have to use the "md"-spacy-model for this function
-        lenght += lengt
-        filteredtxts += filteredtexts
-        filteredNOUNss += filteredNOUNs
-        uniquelst += unique
-        filteredVERBss += filteredVERBs
-        filteredADJss += filteredADJs
-        poslex += poslexdoce
-        neglex += neglexdoce
-        polarscores += polarscoree
-
-    return (lenght, filteredtxts, filteredNOUNss, uniquelst, filteredVERBss, filteredADJss, poslex, neglex, polarscores)
-
-
 def get_spacy_tokenizer(default_lingo, supported_languages, higher):
     '''returns the nlp function corresponding to the language of a doc/corpus'''
     if default_lingo in supported_languages:
@@ -496,7 +654,7 @@ def get_language(multilanguage, doc, text, default_lingo, supported_lingos):
         textlist = []  # the list which contains the string of text for each unique languages
         removerow = []  # just an index of rows
         count_sents = 0
-        doc = nlp(text)
+        '''doc = nlp(text)'''
         for sent in doc.sents:
             count_sents += 1
             langcode = sent._.language['language']
@@ -574,152 +732,4 @@ def get_path(parsable_extensions):
 
 
 if __name__ == '__main__':
-
-    ######## defining some variables ##############
-
-    supported_languages = ["English", "German",
-                           "Spanish", "Portuguese", "French", "Italian"]
-    # this is required, otherwise we get weird languages for long and untidy documents
-    # making English the default, which is used when no language is detected
-    default_language = "English"
-    useful_characters = string.printable + \
-        'äöüÄÖÜéÉèÈáÁàÀóÓòÒúÚùÙíÍìÌñÑãÃõÕêÊâÂîÎôÔûÛ'  # filtering the characters of the texts
-    parsable_extensions = ['.csv', '.doc', '.docx', '.eml', '.epub', '.json',
-                           '.msg', '.odt', '.ogg', '.pdf', '.pptx', '.rtf', '.xlsx', '.xls']
-    """ '.gif', '.jpg', '.mp3', '.tiff', '.wav', '.ps', '.html' """
-    # the extensions which we try to parse to text
-    doc_maxlength = 2000000  # default would be 1m
-    minlength = 100  # if textlen is lower, we ignore this text
-    POS_blacklist = ["PUNCT", "PART", "SYM", "SPACE",
-                     "DET", "CONJ", "CCONJ", "ADP", "INTJ", "X", ""]  # we filter out these token-types
-    # the parsing functions in use
-    parsers = [titlecaps, token_replacement, url_replacement]
-
-    # Determining the directory from which to import documents
-    path = get_path(parsable_extensions)
-
-    # now we let the user determine if he wants to use the sentence-wise
-    # language detection or the document-wise. The sentence-wise allows
-    # to ignore parts of docs that contain text not of interest, such
-    # as metadata in english for a german document or so
-    multilanguage, nlp = decide_language_detection(
-        path, supported_languages, default_language)
-
-    ######## starting the functions / pipelines ##############
-    nlp.add_pipe(LanguageDetector(), name='language_detector', last=True)
-
-    pdf_to_text(path, parsable_extensions)
-
-    # XXX make it a function.
-    # input: path, minlength, nlp, multilanguage, default_language, supported_languages
-    # output: filenames, textnames, languagelist, texts
-
-    filenames_lst = [x for x in os.listdir(
-        path) if x.endswith(".txt")]
-
-    filenames = []
-    textnames = []
-    filenames_list = []
-    textnames_list = []
-    languagelist = []
-    textspre = []
-
-    for i in range(len(filenames_lst)):
-        filename = str(filenames_lst[i])
-        textname = get_textname(filenames_lst[i])
-        text = import_doc(path, filename)
-        if len(text) > minlength:
-            textspre.append(text)
-        filenames_list.append(filename)
-        textnames_list.append(textname)
-
-    with nlp.disable_pipes("ner", "tagger"):
-        nlp.max_length = doc_maxlength
-        docs = list(nlp.pipe(textspre))
-
-    counter = 0
-    texts = []
-
-    for doc in docs:
-        for funct in parsers:
-            txt = funct(doc)
-        language, text, = get_language(multilanguage, doc,
-                                       txt, default_language,
-                                       supported_languages)
-        if type(language) == list:
-            textnew = []
-            for j in range(len(language)):
-                filenames.append(filenames_list[counter])
-                textnames.append(textnames_list[counter])
-            languagelist += language
-            texts += text
-        elif type(language) == str:
-            filenames = filenames_list
-            textnames = textnames_list
-            languagelist.append(language)
-            for funct in parsers:
-                text = funct(doc)
-            texts.append(text)
-        else:
-            print("something went wrong")
-        counter += 1
-
-        # XXX make it a function
-
-    doc_list = list(
-        zip(filenames, textnames, languagelist, texts))
-
-    doc_list.sort(key=lambda doc_list: doc_list[2])
-
-    length, filteredtxts, filteredNOUNss, uniquelst, filteredVERBss, filteredADJss, poslex, neglex, polarscores = get_all_text_info(
-        doc_list, supported_languages, languagelist, POS_blacklist, doc_maxlength)
-
-    df_doclist = pd.DataFrame(doc_list, columns=[
-        'File', 'Textname', 'Sprache', 'Text'])
-    df_doclist['Textlänge'] = length
-    df_doclist['bereinigter Text'] = filteredtxts
-    df_doclist['Substantive'] = filteredNOUNss
-    df_doclist['Verben'] = filteredVERBss
-    df_doclist['Adjektive'] = filteredADJss
-    df_doclist['Entitäten'] = uniquelst
-    df_doclist['Positive Wörter'] = poslex
-    df_doclist['Negative Wörter'] = neglex
-    df_doclist['Polarität'] = polarscores
-
-    polarcat = []
-    for score in polarscores:
-        if float(score) < 0.1:
-            polarcat.append("neutral")
-        else:
-            polarcat.append("emotional")
-    df_doclist['Polaritätskategorie'] = polarcat
-
-    ######## saving the pandas data frame to path ##############
-
-    print(df_doclist.shape)
-    df_doclist.to_pickle(path+"/df_doclist.pkl")
-
-    ######## an example what we can do with all that: crate scattertext html graph ##############
-    nlp = get_spacy_tokenizer("German", supported_languages, higher=False)
-    try:
-        corpus = st.CorpusFromPandas(
-            df_doclist, category_col='Sprache', text_col='bereinigter Text', nlp=nlp).build()
-        # actually, the category should be sth else than the language, because if we take the language
-        # we don't get a big overlap between the categories! so ideally we would train a textcat model
-        # BEFORE and use the category-column inside pd_doclist as the category
-
-        term_freq_df = corpus.get_term_freq_df()
-        term_freq_df['German words'] = corpus.get_scaled_f_scores('German')
-        pprint(list(term_freq_df.sort_values(
-            by='German words', ascending=False).index[:20]))
-
-        html = st.produce_scattertext_explorer(
-            corpus,
-            category='German',  # not_category_name='English',
-            minimum_term_frequency=5, metadata=corpus.get_df()['Textname'])
-
-        fn = path+path.split("/")[-2]+'-Auswertung.html'
-        open(fn, 'wb').write(html.encode('utf-8'))
-        print('Open ' + fn + ' in Chrome or Firefox.')
-    except:
-        print("Only one language was given. Hence, scatterplot does not work a.t.m.")
+    main()
