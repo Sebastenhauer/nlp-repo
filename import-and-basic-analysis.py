@@ -25,7 +25,7 @@ useful_characters # set to = string.printable + \
 	'äöüÄÖÜéÉèÈáÁàÀóÓòÒúÚùÙíÍìÌñÑãÃõÕêÊâÂîÎôÔûÛ' 
 parsable_extensions # set to ['.csv', '.doc', '.docx', '.eml', '.epub', '.json',
 					   '.msg', '.odt', '.ogg', '.pdf', '.pptx', '.rtf', '.xlsx', '.xls']
-maxlength # set to = 2000000  # default would be 1m
+# set to = 2000000  # default would be 1m
 minlength # set to = 100  # if textlen is lower, we ignore this text
 POS_blacklist # set to = ["PUNCT", "PART", "SYM", "SPACE",
 				 "DET", "CONJ", "CCONJ", "ADP", "INTJ", "X", ""] 
@@ -220,7 +220,7 @@ def keep_root(token, word_order=0):
     return "X" in shape
 
 
-def pos_tokenizer(doc, nlp, POS_blacklist, maxlength, use_base=True):
+def pos_tokenizer(doc, nlp, POS_blacklist, doc_maxlength, use_base=True):
     ''' Diese Funktion setzen wir erst ein, wenn wir bereits die Sprache kennen.
     Daher benutzen wir hier nicht das default englische nlp, sondern die Sprachenspezifische.
     Gerade für diese Funktion ist dies wichtig, da wir hier ja auf die token.pos_
@@ -234,7 +234,7 @@ def pos_tokenizer(doc, nlp, POS_blacklist, maxlength, use_base=True):
     verbs = []
     adjs = []
     with nlp.disable_pipes("ner"):
-        nlp.max_length = maxlength
+        nlp.max_length = doc_maxlength
         for sent in doc.sents:
             sent_tokens = []
             sent_nouns = []
@@ -320,13 +320,13 @@ def get_polarlex(lingo):
     return postxt, negtxt
 
 
-def get_language_info(doc_list, supported_languages, languagelist, POS_blacklist, maxlength):
+def get_all_text_info(doc_list, supported_languages, languagelist, POS_blacklist, doc_maxlength):
     '''applies pos_tokenizer corrently on a document list
     doc_list is the lable with texts, textnames...
     supported_languages is a list
     languagelist is a column in doc_list
     POS_blacklist is a list of POS-tags that are omitted in the function pos_tokenizer
-    maxlength is numeric
+    doc_maxlength is the maximum number of tokens within a document that spacy processes 
     '''
 
     lenght = []
@@ -363,7 +363,7 @@ def get_language_info(doc_list, supported_languages, languagelist, POS_blacklist
             leng = len(doc)
             lengt.append(str(leng))
             filteredtxt, filteredNOUN, filteredVERB, filteredADJ = pos_tokenizer(
-                doc, nlp, POS_blacklist, maxlength)
+                doc, nlp, POS_blacklist, doc_maxlength)
             filteredtexts.append(filteredtxt)
             filteredNOUNs.append(filteredNOUN)
             filteredVERBs.append(filteredVERB)
@@ -588,7 +588,7 @@ if __name__ == '__main__':
                            '.msg', '.odt', '.ogg', '.pdf', '.pptx', '.rtf', '.xlsx', '.xls']
     """ '.gif', '.jpg', '.mp3', '.tiff', '.wav', '.ps', '.html' """
     # the extensions which we try to parse to text
-    maxlength = 2000000  # default would be 1m
+    doc_maxlength = 2000000  # default would be 1m
     minlength = 100  # if textlen is lower, we ignore this text
     POS_blacklist = ["PUNCT", "PART", "SYM", "SPACE",
                      "DET", "CONJ", "CCONJ", "ADP", "INTJ", "X", ""]  # we filter out these token-types
@@ -634,7 +634,7 @@ if __name__ == '__main__':
         textnames_list.append(textname)
 
     with nlp.disable_pipes("ner", "tagger"):
-        nlp.max_length = maxlength
+        nlp.max_length = doc_maxlength
         docs = list(nlp.pipe(textspre))
 
     counter = 0
@@ -671,8 +671,8 @@ if __name__ == '__main__':
 
     doc_list.sort(key=lambda doc_list: doc_list[2])
 
-    length, filteredtxts, filteredNOUNss, uniquelst, filteredVERBss, filteredADJss, poslex, neglex, polarscores = get_language_info(
-        doc_list, supported_languages, languagelist, POS_blacklist, maxlength)
+    length, filteredtxts, filteredNOUNss, uniquelst, filteredVERBss, filteredADJss, poslex, neglex, polarscores = get_all_text_info(
+        doc_list, supported_languages, languagelist, POS_blacklist, doc_maxlength)
 
     df_doclist = pd.DataFrame(doc_list, columns=[
         'File', 'Textname', 'Sprache', 'Text'])
