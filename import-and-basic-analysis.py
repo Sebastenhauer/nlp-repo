@@ -64,52 +64,62 @@ sys.executable
 
 
 def main():
-    ######## defining some variables ##############
+    ######## defining the parameters ##############
     supported_languages = ["English", "German",
                            "Spanish", "Portuguese", "French", "Italian"]
     # this is required, otherwise we get weird languages for long and untidy documents
-    # making English the default, which is used when no language is detected
+    
     default_language = "English"
+	# making English the default, which is used when no language is detected
+	
     useful_characters = string.printable + \
         'äöüÄÖÜéÉèÈáÁàÀóÓòÒúÚùÙíÍìÌñÑãÃõÕêÊâÂîÎôÔûÛ'  # filtering the characters of the texts
+	
     parsable_extensions = ['.csv', '.doc', '.docx', '.eml', '.epub', '.json',
                            '.msg', '.odt', '.ogg', '.pdf', '.pptx', '.rtf', '.xlsx', '.xls']
     """ '.gif', '.jpg', '.mp3', '.tiff', '.wav', '.ps', '.html' """
     # the extensions which we try to parse to text
-    doc_maxlength = 2000000  # default would be 1m
+	
+    doc_maxlength = 2000000  # default would be 1m which is the maximum length of a document in spacy
+	
     minlength_of_text = 100  # if textlen is lower, we ignore this text
+	
     POS_blacklist = ["PUNCT", "PART", "SYM", "SPACE",
                      "DET", "CONJ", "CCONJ", "ADP", "INTJ", "X", ""]  # we filter out these token-types
-    # the parsing functions in use
-    parsers = [titlecaps, token_replacement, url_replacement]
+    
+    parsers = [titlecaps, token_replacement, url_replacement] # the parsing functions used
+	
+    path = get_path(parsable_extensions) # Determining the directory from which to import documents
 
-    # Determining the directory from which to import documents
-    path = get_path(parsable_extensions)
-
-    # now we let the user determine if he wants to use the sentence-wise
-    # language detection or the document-wise. The sentence-wise allows
-    # to ignore parts of docs that contain text not of interest, such
-    # as metadata in english for a german document or so
+	
+    ######## initiating the pipelines ##############
     multilanguage, nlp = decide_language_detection(
         path, supported_languages, default_language)
+	# let the user determine if he wants to use the sentence-wise
+    # language detection or the document-wise. The sentence-wise allows
+    # to ignore parts of docs that contain text not of interest, such
+    # as metadata in english for a german document
 
-    ######## starting the functions / pipelines ##############
     nlp.add_pipe(LanguageDetector(), name='language_detector', last=True)
+	# add the language detector to the spacy nlp pipeline
 
     pdf_to_text(path, parsable_extensions)
+	# safe all non-text-documents with parsable extensions to txt-file
 
     doc_list = documents_dataframe(path, minlength_of_text, doc_maxlength,
                                    nlp, multilanguage, default_language, supported_languages, parsers, useful_characters)
+	# create a document list with detected language, filename, textname and text
+	
     df_doclist = get_all_text_info(
         doc_list, supported_languages, POS_blacklist, doc_maxlength)
-
-    ######## saving the pandas data frame to path #############
+	# use the document list to retrieve various basic information from the text 
 
     print(df_doclist.shape)
-    df_doclist.to_pickle(path+"/df_doclist.pkl")
+    df_doclist.to_pickle(path+"/df_doclist.pkl") # saving the data frame to path
+	df_doclist = pd.read_pickle("./df_doclist.pkl") # and opening it
 
-    ######## an example what we can do with all that: crate scattertext html graph ##############
-    nlp = get_spacy_tokenizer("German", supported_languages, higher=False)
+    ######## an example what we can do with df_doclist: create scattertext html graph ##############
+    nlp = get_spacy_tokenizer("German", supported_languages, bigmodel_required=False)
     try:
         corpus = st.CorpusFromPandas(
             df_doclist, category_col='Sprache', text_col='bereinigter Text', nlp=nlp).build()
@@ -140,19 +150,19 @@ def main():
 def documents_dataframe(path, minlength_of_text, doc_maxlength, nlp, multilanguage, default_language, supported_languages, parsers, useful_characters):
     '''outputs an array which contains rows of the documents' texts, corresponding filenames, textnames and languages'''
 
-    filenames_lst = [x for x in os.listdir(
+    filenames_list_beforeprocess = [x for x in os.listdir(
         path) if x.endswith(".txt")]
 
-    filenames = []
-    textnames = []
+    filenames_list_final = []
+    textnames_list_final = []
     filenames_list = []
     textnames_list = []
     languagelist = []
     textslist = []
 
-    for i in range(len(filenames_lst)):
-        filename = str(filenames_lst[i])
-        textname = get_textname(filenames_lst[i])
+    for i in range(len(filenames_list_beforeprocess)):
+        filename = str(filenames_list_beforeprocess[i])
+        textname = get_textname(filenames_list_beforeprocess[i])
         doc_text = import_doc(path, filename, useful_characters)
         if len(doc_text) > minlength_of_text:
             textslist.append(doc_text)
@@ -175,13 +185,13 @@ def documents_dataframe(path, minlength_of_text, doc_maxlength, nlp, multilangua
         if type(language) == list:
             '''textnew = [] ???'''
             for j in range(len(language)):
-                filenames.append(filenames_list[counter])
-                textnames.append(textnames_list[counter])
+                filenames_list_final.append(filenames_list[counter])
+                textnames_list_final.append(textnames_list[counter])
             languagelist += language
             texts += text
         elif type(language) == str:
-            filenames = filenames_list
-            textnames = textnames_list
+            filenames_list_final = filenames_list
+            textnames_list_final = textnames_list
             languagelist.append(language)
             for funct in parsers:
                 text = funct(doc)
@@ -191,7 +201,7 @@ def documents_dataframe(path, minlength_of_text, doc_maxlength, nlp, multilangua
         counter += 1
 
     doc_list = list(
-        zip(filenames, textnames, languagelist, texts))
+        zip(filenames_list_final, textnames_list_final, languagelist, texts))
 
     doc_list.sort(key=lambda doc_list: doc_list[2])
     return doc_list
@@ -217,7 +227,7 @@ def get_all_text_info(doc_list, supported_languages, POS_blacklist, doc_maxlengt
 
     for lin in sorted(list(set([row[2] for row in doc_list]))):
         nlp = get_spacy_tokenizer(
-            lin, supported_languages, higher=False)
+            lin, supported_languages, bigmodel_required=False)
         postxt, negtxt = get_polarlex(lin)
         texte = []
 
@@ -534,8 +544,8 @@ def pos_tokenizer(doc, nlp, POS_blacklist, doc_maxlength, use_base=True):
         return txt, nouns, verbs, adjs
 
 
-def get_polarlex(lingo):
-    language = pycountry.languages.get(name=lingo)
+def get_polarlex(input_language):
+    language = pycountry.languages.get(name=input_language)
     langcode = language.alpha_2
     while True:
         if os.path.exists("lexika/"):
@@ -563,10 +573,10 @@ def get_polarlex(lingo):
     return postxt, negtxt
 
 
-def get_spacy_tokenizer(default_lingo, supported_languages, higher):
-    '''returns the nlp function corresponding to the language of a doc/corpus'''
+def get_spacy_tokenizer(default_lingo, supported_languages, bigmodel_required):
+    '''returns the spacy nlp function corresponding to the language of a document'''
     if default_lingo in supported_languages:
-        if higher == False:
+        if bigmodel_required == False:
             if default_lingo == "German":
                 import de_core_news_sm
                 nlp = de_core_news_sm.load()
@@ -628,7 +638,7 @@ def decide_language_detection(path, supported_languages, default_lingo):
         else:
             print("Thank you for your input. Language Detection starting now")
             break
-    nlp = get_spacy_tokenizer(default_lingo, supported_languages, higher=False)
+    nlp = get_spacy_tokenizer(default_lingo, supported_languages, bigmodel_required=False)
     return multilanguage, nlp
 
 
