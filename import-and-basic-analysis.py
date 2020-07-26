@@ -586,7 +586,7 @@ def get_spacy_tokenizer(default_lingo, supported_languages, bigmodel_required):
             elif default_lingo == "Spanish":
                 import es_core_news_sm
                 nlp = es_core_news_sm.load()
-            elif default_lingo == "Frensh":
+            elif default_lingo == "French":
                 import fr_core_news_sm
                 nlp = fr_core_news_sm.load()
             elif default_lingo == "Portuguese":
@@ -605,7 +605,7 @@ def get_spacy_tokenizer(default_lingo, supported_languages, bigmodel_required):
             elif default_lingo == "Spanish":
                 import es_core_news_md
                 nlp = es_core_news_md.load()
-            elif default_lingo == "Frensh":
+            elif default_lingo == "French":
                 import fr_core_news_md
                 nlp = fr_core_news_md.load()
             elif default_lingo == "Portuguese":
